@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <title>DSH Launcher</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header id="toolbar">
+    <div class="brand">DSH Launcher</div>
+
+    <button id="btn-back" title="后退">←</button>
+    <button id="btn-forward" title="前进">→</button>
+    <button id="btn-reload" title="刷新页面">⟳</button>
+
+    <div id="urlbar" class="urlbar">—</div>
+
+    <span id="status" class="status status-down">● 未连接</span>
+
+    <button id="btn-start" class="primary">启动</button>
+    <button id="btn-stop">停止</button>
+    <button id="btn-export">导出项目</button>
+    <button id="btn-external" title="用普通窗口打开 dsh（实验对比帧率）">新窗口</button>
+    <button id="btn-settings">设置</button>
+    <button id="btn-log">日志</button>
+  </header>
+
+  <main id="content">
+    <div id="overlay">
+      <div id="overlay-text" class="overlay-text">
+        服务未就绪。<br />点击「启动」启动容器并打开网页。
+      </div>
+    </div>
+    <div id="debug-panel" class="debug-panel hidden">
+      <span class="debug-title">调试</span>
+      <span>FPS <b id="dbg-fps" class="dbg-val">--</b></span>
+      <span>GPU <b id="dbg-gpu" class="dbg-val">--</b></span>
+      <span>URL <b id="dbg-url" class="dbg-val">--</b></span>
+      <span>状态 <b id="dbg-status" class="dbg-val">--</b></span>
+    </div>
+  </main>
+
+  <!-- 日志面板 -->
+  <div id="log-panel" class="log-panel hidden">
+    <div class="log-header">
+      <span>运行日志</span>
+      <button id="btn-clear-log" class="small">清空</button>
+    </div>
+    <div id="log-body"></div>
+  </div>
+
+  <!-- 设置弹窗 -->
+  <div id="settings-modal" class="modal hidden">
+    <div class="modal-box">
+      <h2>设置</h2>
+
+      <fieldset>
+        <legend>基本设置</legend>
+        <div class="row">
+          <label>容器名</label>
+          <input id="set-containerName" type="text" placeholder="dsh-modified" />
+        </div>
+        <div class="row">
+          <label>端口</label>
+          <input id="set-port" type="number" min="1" max="65535" placeholder="3080" />
+        </div>
+        <div class="row checkbox-row">
+          <label>
+            <input id="set-autoStartDocker" type="checkbox" />
+            引擎未运行时自动启动 Docker Desktop
+          </label>
+        </div>
+        <div class="row">
+          <label>Docker Desktop 路径（自动启动用）</label>
+          <input id="set-dockerDesktopPath" type="text" placeholder="C:\Program Files\Docker\Docker\Docker Desktop.exe" />
+        </div>
+        <div class="row">
+          <label>容器内项目目录（导出用）</label>
+          <input id="set-exportSource" type="text" placeholder="/root/projects" />
+        </div>
+        <div class="row">
+          <label>等待服务就绪超时（毫秒）</label>
+          <input id="set-timeout" type="number" min="1000" placeholder="60000" />
+        </div>
+        <div class="row checkbox-row">
+          <label>
+            <input id="set-debugMode" type="checkbox" />
+            调试模式（界面右上角显示 FPS 等诊断信息）
+          </label>
+        </div>
+        <div class="row">
+          <label>隐藏元素选择器（性能优化，逗号分隔；如桌宠：.pet, #live2d）</label>
+          <input id="set-hideSelectors" type="text" placeholder="留空则不隐藏" />
+        </div>
+        <div class="row">
+          <label>注入自定义 CSS（可覆盖插件样式以消除卡顿，留空则不注入）</label>
+          <textarea id="set-injectCss" rows="6" spellcheck="false" placeholder="例如去掉装饰层阴影等"></textarea>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>命令模板（高级，占位符：{container} {port} {source} {dest}）</legend>
+        <div class="row">
+          <label>启动容器</label>
+          <input id="set-startCommand" type="text" />
+        </div>
+        <div class="row">
+          <label>启动 dsh web</label>
+          <input id="set-webCommand" type="text" />
+        </div>
+        <div class="row">
+          <label>停止容器</label>
+          <input id="set-stopCommand" type="text" />
+        </div>
+        <div class="row">
+          <label>内嵌浏览器地址</label>
+          <input id="set-url" type="text" />
+        </div>
+        <div class="row">
+          <label>导出命令</label>
+          <input id="set-exportCommand" type="text" />
+        </div>
+      </fieldset>
+
+      <div class="preview">
+        <div class="preview-title">实际执行的命令预览：</div>
+        <pre id="preview">…</pre>
+      </div>
+
+      <div class="modal-actions">
+        <button id="btn-save-settings" class="primary">保存</button>
+        <button id="btn-cancel-settings">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 导出弹窗 -->
+  <div id="export-modal" class="modal hidden">
+    <div class="modal-box">
+      <h2>导出项目文件</h2>
+
+      <fieldset>
+        <legend>选择容器内目录（点击文件夹进入，点击「选用当前目录」设为导出源）</legend>
+        <div class="pathbar">
+          <button id="btn-up-dir" class="small" title="上级目录">↑ 上级</button>
+          <input id="browse-path" type="text" spellcheck="false" />
+          <button id="btn-refresh-dir" class="small" title="刷新">⟳</button>
+        </div>
+        <div id="dir-list" class="dir-list"></div>
+        <div class="dir-actions">
+          <span id="dir-hint" class="dir-hint"></span>
+          <button id="btn-use-dir" class="primary">选用当前目录</button>
+        </div>
+      </fieldset>
+
+      <div class="row">
+        <label>导出源（容器内路径）</label>
+        <input id="export-source" type="text" readonly />
+      </div>
+
+      <div class="row">
+        <label>导出到（本机目录）</label>
+        <div class="inline">
+          <input id="export-dest" type="text" placeholder="点击右侧选择目录" />
+          <button id="btn-choose-dest" class="small">选择目录</button>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button id="btn-run-export" class="primary">开始导出</button>
+        <button id="btn-open-export" disabled>打开导出目录</button>
+        <button id="btn-close-export">关闭</button>
+      </div>
+      <div id="export-result" class="export-result"></div>
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>
