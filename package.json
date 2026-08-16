@@ -20,6 +20,7 @@
   "build": {
     "appId": "com.dshsoft.launcher",
     "productName": "DSH Launcher",
+    "electronDist": "node_modules/electron/dist",
     "files": [
       "src/**/*",
       "package.json"
